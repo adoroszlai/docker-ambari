@@ -16,7 +16,7 @@ set -e -u
 
 : ${AMBARI_VERSION:=3.0.0.0-SNAPSHOT}
 : ${BUILD:=latest}
-: ${FLAVORS:="debian8"}
+: ${FLAVORS:="centos7"}
 : ${GIT_REF:=trunk}
 : ${GIT_REPO:=https://github.com/apache/ambari}
 : ${HUB_REPO:=adoroszlai}
@@ -27,7 +27,7 @@ function clean {
 }
 
 function clone-ambari {
-  echo "Building $AMBARI_VERSION from $GIT_REPO/tree/$GIT_REF"
+  echo "Checking out $GIT_REPO/tree/$GIT_REF"
 
   if [[ $GIT_REF == trunk || $GIT_REF == branch* || $GIT_REF == AMBARI* || $GIT_REF == release* ]]; then
     git clone -b ${GIT_REF} --depth 1 ${GIT_REPO} ambari
@@ -42,6 +42,7 @@ function clone-ambari {
 function maven-build {
   docker build -t ${HUB_REPO}/ambari-builder - < builder.docker
 
+  echo "Building Ambari ${AMBARI_VERSION}"
   docker run -i --rm --name ambari-builder \
     -v "$(pwd)/ambari:/ambari:delegated" \
     -v "${HOME}/.m2:/root/.m2:cached" \
@@ -67,6 +68,7 @@ function build-module {
   local module=$1
   local flavor=$2
 
+  echo "Building ${module}:${BUILD}-${flavor}"
   cp -v ${module}/* ambari/${module}/target/repo/
   docker build \
     --build-arg "AMBARI_VERSION=$AMBARI_VERSION" \
@@ -85,8 +87,16 @@ function build-modules {
   done
 }
 
+function docker-push {
+  for flavor in ${FLAVORS}; do
+    for module in ${MODULES}; do
+      docker push ${HUB_REPO}/${module}:${BUILD}-${flavor}
+    done
+  done
+}
+
 function help {
-  echo "Usage: $0 (all|ambari|modules|clean)"
+  echo "Usage: $0 (all|ambari|modules|clean|deploy)"
 }
 
 target=${1:-all}
@@ -104,6 +114,9 @@ case $target in
     ;;
   modules)
     build-modules
+    ;;
+  deploy)
+    docker-push
     ;;
   *)
     help
