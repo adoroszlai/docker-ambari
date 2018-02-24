@@ -12,10 +12,6 @@
 
 FROM maven:3.5-jdk-8
 
-ARG AMBARI_VERSION=2.0.0.0-SNAPSHOT
-ARG GIT_REF=trunk
-ARG GIT_REPO=https://github.com/apache/ambari
-
 RUN apt-get update -q -y \
   && apt-get install -y --no-install-recommends \
     curl \
@@ -25,14 +21,3 @@ RUN apt-get update -q -y \
     python2.7 \
     python2.7-dev \
   && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /
-RUN git clone --no-checkout ${GIT_REPO} ambari
-
-WORKDIR /ambari
-RUN git checkout ${GIT_REF}
-RUN mvn versions:set -DnewVersion=${AMBARI_VERSION} \
-  && cd ambari-metrics && mvn versions:set -DnewVersion=${AMBARI_VERSION} && cd .. \
-  && mvn -DskipTests -Dcheckstyle.skip -Drat.skip -Dfindbugs.skip -DnewVersion=${AMBARI_VERSION} \
-    -am -pl ambari-admin,ambari-agent,ambari-metrics,ambari-server,ambari-web \
-    clean package
