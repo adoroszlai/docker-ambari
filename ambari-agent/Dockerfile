@@ -22,7 +22,7 @@ ARG HUB_REPO
 ENV AMBARI_AGENT_RUN_IN_FOREGROUND true
 ENV CONF_DIR /etc/ambari-agent/conf
 
-COPY --from=${HUB_REPO}/ambari-build:${BUILD} /ambari/ambari-agent/target/ambari-agent-${AMBARI_VERSION}/ /
+ADD ambari-agent.tar.gz /
 RUN bash /var/lib/ambari-agent/install-helper.sh install
 
 WORKDIR /

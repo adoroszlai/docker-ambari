@@ -21,8 +21,9 @@ ARG HUB_REPO
 
 ENV AMBARI_SERVER_RUN_IN_FOREGROUND true
 ENV CONF_DIR /etc/ambari-server/conf
+ENV ROOT /
 
-COPY --from=${HUB_REPO}/ambari-build:${BUILD} /ambari/ambari-server/target/ambari-server-${AMBARI_VERSION}-dist/ /
+ADD ambari-server.tar.gz /
 RUN bash /var/lib/ambari-server/install-helper.sh install
 
 WORKDIR /tmp

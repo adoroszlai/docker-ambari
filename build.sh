@@ -22,10 +22,13 @@ set -e -u
 : ${HUB_REPO:=adoroszlai}
 : ${MODULES:="ambari-agent ambari-server"}
 
+function clean {
+  rm -fr ambari
+}
+
 function clone-ambari {
   echo "Building $AMBARI_VERSION from $GIT_REPO/tree/$GIT_REF"
 
-  rm -fr ambari
   if [[ $GIT_REF == trunk || $GIT_REF == branch* || $GIT_REF == AMBARI* || $GIT_REF == release* ]]; then
     git clone -b ${GIT_REF} --depth 1 ${GIT_REPO} ambari
   else
@@ -36,7 +39,7 @@ function clone-ambari {
   fi
 }
 
-function build-ambari-image {
+function maven-build {
   docker build -t ${HUB_REPO}/ambari-builder - < builder.docker
 
   docker run -i --rm --name ambari-builder \
@@ -53,26 +56,25 @@ function build-ambari-image {
         -am -pl ambari-admin,ambari-agent,ambari-server,ambari-web \
         -DnewVersion=${AMBARI_VERSION} clean package
 EOF
-
-  docker build -t ${HUB_REPO}/ambari-build:${AMBARI_VERSION} -f holder.docker .
 }
 
 function build-ambari {
   clone-ambari
-  build-ambari-image
+  maven-build
 }
 
 function build-module {
   local module=$1
   local flavor=$2
 
+  cp -v ${module}/* ambari/${module}/target/repo/
   docker build \
     --build-arg "AMBARI_VERSION=$AMBARI_VERSION" \
     --build-arg "BUILD=$BUILD" \
     --build-arg "FLAVOR=$flavor" \
     --build-arg "HUB_REPO=$HUB_REPO" \
-    -t ${HUB_REPO}/${module}:${AMBARI_VERSION}-${flavor} \
-    ${module}
+    -t ${HUB_REPO}/${module}:${BUILD}-${flavor} \
+    ambari/${module}/target/repo
 }
 
 function build-modules {
@@ -83,20 +85,19 @@ function build-modules {
   done
 }
 
-function build-all {
-  build-ambari
-  build-modules
-}
-
 function help {
-  echo "Usage: $0 (all|ambari|modules)"
+  echo "Usage: $0 (all|ambari|modules|clean)"
 }
 
 target=${1:-all}
 
 case $target in
+  clean)
+    clean
+    ;;
   all)
-    build-all
+    build-ambari
+    build-modules
     ;;
   ambari)
     build-ambari
