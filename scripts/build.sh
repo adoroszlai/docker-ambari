@@ -14,13 +14,12 @@
 
 set -e -u
 
-: ${AMBARI_VERSION:=3.0.0.0-SNAPSHOT}
-: ${BUILD:=latest}
-: ${FLAVORS:="centos7"}
-: ${GIT_REF:=trunk}
-: ${GIT_REPO:=https://github.com/apache/ambari}
-: ${HUB_REPO:=adoroszlai}
-: ${MODULES:="ambari-agent ambari-server"}
+this="${BASH_SOURCE-$0}"
+BINDIR=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+BASE_DIR="${BINDIR}/.."
+
+source "${BASE_DIR}"/vars.sh
+source "${BASE_DIR}"/branch_vars.sh
 
 function clean {
   rm -fr ambari
@@ -40,7 +39,7 @@ function clone-ambari {
 }
 
 function maven-build {
-  docker build -t ${HUB_REPO}/ambari-builder - < builder.docker
+  docker build -t ${HUB_REPO}/ambari-builder - < ambari-builder.docker
 
   echo "Building Ambari ${AMBARI_VERSION}"
   docker run -i --rm --name ambari-builder \
@@ -96,7 +95,17 @@ function docker-push {
 }
 
 function help {
-  echo "Usage: $0 (all|ambari|modules|clean|deploy)"
+  echo "Usage: $0 (all|ambari|modules|deploy|clean|env)"
+}
+
+function environment {
+  echo "AMBARI_VERSION: ${AMBARI_VERSION}"
+  echo "BUILD: ${BUILD}"
+  echo "FLAVORS: ${FLAVORS}"
+  echo "GIT_REF: ${GIT_REF}"
+  echo "GIT_REPO: ${GIT_REPO}"
+  echo "HUB_REPO: ${HUB_REPO}"
+  echo "MODULES: ${MODULES}"
 }
 
 target=${1:-all}
@@ -117,6 +126,9 @@ case $target in
     ;;
   deploy)
     docker-push
+    ;;
+  env)
+    environment
     ;;
   *)
     help
