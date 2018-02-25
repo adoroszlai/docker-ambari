@@ -1,0 +1,1 @@
+AMBARI_RELEASE ?= 2.6.1
