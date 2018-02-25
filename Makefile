@@ -91,13 +91,13 @@ ${MODULES}: package
 ${MODULES}: %: $(call create-module-matrix,%)
 package: source ambari-builder ${PACKAGED_MODULES}
 source: ${AMBARI_SRC}
-${MODULE_MATRIX}: %: .docker/${DOCKER_USERNAME}/%
+${MODULE_MATRIX}: %: .docker/${DOCKER_USERNAME}/modules/%
 ${DOCKERFILES_WITHOUT_CONTEXT}: %: .docker/${DOCKER_USERNAME}/no_context/%
 
 ${DEPLOY_TARGETS}:
 	docker push ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@))
 
-.docker/${DOCKER_USERNAME}/%:
+.docker/${DOCKER_USERNAME}/modules/%:
 	$(eval module := $(call module-name,$*))
 	$(eval build  := $(call build-name,$*))
 	$(eval flavor := $(call flavor-name,$*))
