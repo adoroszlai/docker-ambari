@@ -120,6 +120,7 @@ ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 		-u "${UID}:${GID}" \
 		-v "${PWD}/$<:/ambari:delegated" \
 		-v "${HOME}/.m2:/root/.m2:cached" \
+		--env "HOME=/ambari" \
 		-w "/ambari" \
 		--entrypoint bash \
 		${DOCKER_USERNAME}/ambari-builder -c \
