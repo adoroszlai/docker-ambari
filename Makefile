@@ -22,7 +22,9 @@ GID ?= $(shell id -g)
 HOME_IN_DOCKER := /ambari
 
 AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
+AMBARI_VERSION := ${AMBARI_RELEASE}.0.0
 MODULE_PART_SEPARATOR := =
+EXTRA_MODULES := $(if $(findstring ambari-server,${MODULES}),${COMMA}ambari-admin${COMMA}ambari-web,)
 
 # Returns "module=build=flavor" for each element of the (module x flavor) matrix.
 #
@@ -83,6 +85,7 @@ DEPLOY_TARGETS := $(foreach i,$(MODULE_MATRIX),deploy-${i})
 debug:
 	# AMBARI_RELEASE: ${AMBARI_RELEASE}
 	# DIST_URL: ${DIST_URL}
+	# EXTRA_MODULES: ${EXTRA_MODULES}
 	# FLAVORS: ${FLAVORS}
 	# MODULES: ${MODULES}
 	# PWD: ${PWD}
@@ -124,7 +127,7 @@ ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 		--entrypoint bash \
 		${DOCKER_USERNAME}/ambari-builder -c \
 			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
-				-am -pl ambari-admin,ambari-web,$(subst ${SPACE},${COMMA},${MODULES}) \
+				-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
 				clean package"
 
 %-src: %-src.tar.gz
