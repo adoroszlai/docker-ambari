@@ -5,12 +5,3 @@ services:
 
 script:
   - make build
-
-before_deploy:
-  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-
-deploy:
-  - provider: script
-    script: make deploy
-    on:
-      all_branches: true
