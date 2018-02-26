@@ -17,19 +17,12 @@ build:
 	# HOME: ${HOME}
 	# PWD: ${PWD}
 	# USER: ${USER}
-	id
-	mkdir -p test
-	# ls before
-	ls -la test
 	docker run -i --rm --name test \
 		-u "${UID}:${GID}" \
+		--env "HOME=/ambari" \
 		-v "${PWD}/test:/ambari:delegated" \
 		-w "/ambari" \
 		--entrypoint bash \
-		centos:7 -c "id; mkdir /ambari/container; ls -la /ambari"
-	# ls after
-	ls -la test
-	touch test/container/host
-	ls -la test/container
+		centos:7 -c "id; pwd; cd ~; pwd"
 
 .PHONY: build
