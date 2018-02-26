@@ -10,20 +10,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+UID ?= $(shell id -u)
+GID ?= $(shell id -g)
+
 build:
 	# HOME: ${HOME}
 	# PWD: ${PWD}
 	# USER: ${USER}
 	id
-	mkdir test
+	mkdir -p test
 	# ls before
 	ls -la test
 	docker run -i --rm --name test \
+		-u "${UID}:${GID}" \
 		-v "${PWD}/test:/ambari:delegated" \
 		-w "/ambari" \
 		--entrypoint bash \
-		centos:7 -c "id; touch /ambari/created_in_container; ls -la /ambari"
+		centos:7 -c "id; mkdir /ambari/container; ls -la /ambari"
 	# ls after
 	ls -la test
+	touch test/container/host
+	ls -la test/container
 
 .PHONY: build
