@@ -19,6 +19,7 @@ MODULES ?= ambari-agent ambari-server
 
 UID ?= $(shell id -u)
 GID ?= $(shell id -g)
+HOME_IN_DOCKER := /ambari
 
 AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
 MODULE_PART_SEPARATOR := =
@@ -116,10 +117,10 @@ ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 	# Building and packaging Ambari ${AMBARI_RELEASE}
 	docker run -i --rm --name ambari-builder \
 		-u "${UID}:${GID}" \
-		-v "${PWD}/$<:/ambari:delegated" \
-		-v "${HOME}/.m2:/root/.m2:cached" \
-		--env "HOME=/ambari" \
-		-w "/ambari" \
+		-v "${PWD}/$<:${HOME_IN_DOCKER}:delegated" \
+		-v "${HOME}/.m2:${HOME_IN_DOCKER}/.m2:cached" \
+		--env "HOME=${HOME_IN_DOCKER}" \
+		-w "${HOME_IN_DOCKER}" \
 		--entrypoint bash \
 		${DOCKER_USERNAME}/ambari-builder -c \
 			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
