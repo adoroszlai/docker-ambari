@@ -77,6 +77,29 @@ $(subst ${SPACE},,          \
 		$(call flavor-name,$1)))
 endef
 
+ifeq (${BUILD_IN_DOCKER},true)
+define build-ambari
+	docker run -i --rm --name ambari-builder \
+		-u "${UID}:${GID}" \
+		-v "${PWD}/$<:${HOME_IN_DOCKER}:delegated" \
+		-v "${HOME}/.m2:${HOME_IN_DOCKER}/.m2:cached" \
+		--env "HOME=${HOME_IN_DOCKER}" \
+		-w "${HOME_IN_DOCKER}" \
+		--entrypoint bash \
+		${DOCKER_USERNAME}/ambari-builder -c \
+			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
+				-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
+				clean package"
+endef
+else
+define build-ambari
+	cd $< && \
+		mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
+			-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
+			clean package
+endef
+endif
+
 MODULE_MATRIX := $(call create-module-matrix,${MODULES})
 PACKAGED_MODULES := $(call get-packaged-module-path,${MODULES})
 PACKAGED_MODULES_WILDCARD := $(subst target/repo,%,${PACKAGED_MODULES})
@@ -118,17 +141,7 @@ ${DEPLOY_TARGETS}:
 
 ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 	# Building and packaging Ambari ${AMBARI_RELEASE}
-	docker run -i --rm --name ambari-builder \
-		-u "${UID}:${GID}" \
-		-v "${PWD}/$<:${HOME_IN_DOCKER}:delegated" \
-		-v "${HOME}/.m2:${HOME_IN_DOCKER}/.m2:cached" \
-		--env "HOME=${HOME_IN_DOCKER}" \
-		-w "${HOME_IN_DOCKER}" \
-		--entrypoint bash \
-		${DOCKER_USERNAME}/ambari-builder -c \
-			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
-				-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
-				clean package"
+	$(call build-ambari)
 
 %-src: %-src.tar.gz
 	tar xzmf $<
