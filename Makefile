@@ -17,6 +17,9 @@ DIST_URL ?= http://archive.apache.org/dist/ambari
 FLAVORS ?= centos6 centos7
 MODULES ?= ambari-agent ambari-server
 
+UID ?= $(shell id -u)
+GID ?= $(shell id -g)
+
 AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
 MODULE_PART_SEPARATOR := =
 DOCKERFILES_WITHOUT_CONTEXT := ambari-builder
@@ -114,6 +117,7 @@ ${DEPLOY_TARGETS}:
 ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 	# Building and packaging Ambari ${AMBARI_RELEASE}
 	docker run -i --rm --name ambari-builder \
+		-u "${UID}:${GID}" \
 		-v "${PWD}/$<:/ambari:delegated" \
 		-v "${HOME}/.m2:/root/.m2:cached" \
 		-w "/ambari" \
