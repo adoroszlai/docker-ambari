@@ -22,7 +22,6 @@ GID ?= $(shell id -g)
 
 AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
 MODULE_PART_SEPARATOR := =
-DOCKERFILES_WITHOUT_CONTEXT := ambari-builder
 
 # Returns "module=build=flavor" for each element of the (module x flavor) matrix.
 #
@@ -92,10 +91,9 @@ deploy: ${DEPLOY_TARGETS}
 
 ${MODULES}: package
 ${MODULES}: %: $(call create-module-matrix,%)
-package: source ambari-builder ${PACKAGED_MODULES}
+package: source ${PACKAGED_MODULES}
 source: ${AMBARI_SRC}
 ${MODULE_MATRIX}: %: .docker/${DOCKER_USERNAME}/modules/%
-${DOCKERFILES_WITHOUT_CONTEXT}: %: .docker/${DOCKER_USERNAME}/no_context/%
 
 ${DEPLOY_TARGETS}:
 	docker push ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@))
@@ -127,12 +125,6 @@ ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
 				-am -pl ambari-admin,ambari-web,$(subst ${SPACE},${COMMA},${MODULES}) \
 				clean package"
-
-.docker/${DOCKER_USERNAME}/no_context/%: %.docker
-	$(eval image := $(notdir $@))
-	# Building Docker image ${image} using $< without context
-	docker build -t ${DOCKER_USERNAME}/${image} - < $<
-	$(call create-marker-file,$@)
 
 %-src: %-src.tar.gz
 	tar xzmf $<
