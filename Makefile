@@ -14,7 +14,7 @@ include vars.mk
 include common.mk
 
 DIST_URL ?= http://archive.apache.org/dist/ambari
-FLAVORS ?= centos6 centos7
+FLAVORS ?= centos6 centos7 debian7 ubuntu16
 MODULES ?= ambari-agent ambari-server
 
 UID ?= $(shell id -u)
