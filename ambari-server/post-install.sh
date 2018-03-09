@@ -21,3 +21,7 @@ for dbtype in $(/bin/ls -1 *CREATE.sql | cut -f3 -d'-' | sort -u); do
   mkdir -p sql/create/${dbtype}
   cp -v Ambari-DDL-${dbtype}-CREATE.sql sql/create/${dbtype}/
 done
+
+# hack: avoid stdout redirection
+find /usr/lib -name serverConfiguration.py | xargs -r perl -wpl -i'' -e 's/self.SERVER_OUT_FILE =.*/self.SERVER_OUT_FILE = "\&1"/'
+perl -wpl -i'' -e 's/> {([0-9])}/>{$1}/' /usr/sbin/ambari_server_main.py
