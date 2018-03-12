@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,20 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG FLAVOR
-ARG HUB_REPO
+set -e -u
 
-FROM ${HUB_REPO}/ambari-base:${FLAVOR}
-
-ENV AMBARI_AGENT_RUN_IN_FOREGROUND true
-ENV CONF_DIR /etc/ambari-agent/conf
-
-ADD ambari-agent.tar.gz /
-RUN bash /var/lib/ambari-agent/install-helper.sh install
-
-WORKDIR /tmp
-COPY post-install.sh ./
-RUN chmod +x post-install.sh && ./post-install.sh && rm post-install.sh
-
-WORKDIR /
-CMD [ "/usr/sbin/ambari-agent", "start" ]
+# hack: avoid stdout redirection
+perl -wpl -i'' \
+  -e 's/> \$OUTFILE//' \
+  /var/lib/ambari-agent/bin/ambari-agent
