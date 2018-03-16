@@ -146,7 +146,7 @@ ${DEPLOY_TARGETS}:
 	$(eval image := $(call format-image-name,${module},${layer},${build},${flavor}))
 	$(eval build_dir := $(if $(findstring base,${layer}),${AMBARI_SRC}/${module}/target/repo,${module}))
 	# Building Docker image: ${image} in ${build_dir}
-	if [[ "${layer}" == "-base" ]]; then cp -v ${module}.docker ${build_dir}/Dockerfile; fi
+	if [ "${layer}" = "-base" ]; then cp -v ${module}.docker ${build_dir}/Dockerfile; fi; \
 	docker build \
 		--build-arg "AMBARI_BUILD=${build}" \
 		--build-arg "FLAVOR=${flavor}" \
