@@ -12,9 +12,14 @@
 
 ARG FLAVOR
 ARG HUB_REPO
-ARG AMBARI_BUILD
 
-FROM ${HUB_REPO}/ambari-agent-base:${AMBARI_BUILD}-${FLAVOR}
+FROM ${HUB_REPO}/ambari-base:${FLAVOR}
 
-COPY post-install.sh /
-RUN chmod +x /post-install.sh && /post-install.sh && rm /post-install.sh
+ENV AMBARI_AGENT_RUN_IN_FOREGROUND true
+ENV CONF_DIR /etc/ambari-agent/conf
+
+ADD ambari-agent.tar.gz /
+RUN bash /var/lib/ambari-agent/install-helper.sh install
+
+WORKDIR /
+CMD [ "/usr/sbin/ambari-agent", "start" ]

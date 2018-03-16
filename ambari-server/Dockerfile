@@ -12,19 +12,9 @@
 
 ARG FLAVOR
 ARG HUB_REPO
+ARG AMBARI_BUILD
 
-FROM ${HUB_REPO}/ambari-base:${FLAVOR}
+FROM ${HUB_REPO}/ambari-server-base:${AMBARI_BUILD}-${FLAVOR}
 
-ENV AMBARI_SERVER_RUN_IN_FOREGROUND true
-ENV CONF_DIR /etc/ambari-server/conf
-ENV ROOT /
-
-ADD ambari-server.tar.gz /
-RUN bash /var/lib/ambari-server/install-helper.sh install
-
-WORKDIR /tmp
-COPY post-install.sh ./
-RUN chmod +x post-install.sh && ./post-install.sh && rm post-install.sh
-
-WORKDIR /
-CMD [ "/usr/sbin/ambari-server", "start" ]
+COPY post-install.sh /
+RUN chmod +x /post-install.sh && /post-install.sh && rm /post-install.sh

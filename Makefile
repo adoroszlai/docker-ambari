@@ -15,6 +15,7 @@ include common.mk
 
 DIST_URL ?= http://archive.apache.org/dist/ambari
 FLAVORS ?= centos6 centos7 debian7 ubuntu16
+LAYERS ?= base
 MODULES ?= ambari-agent ambari-server
 
 UID ?= $(shell id -u)
@@ -26,11 +27,13 @@ AMBARI_VERSION := ${AMBARI_RELEASE}.0.0
 MODULE_PART_SEPARATOR := =
 EXTRA_MODULES := $(if $(findstring ambari-server,${MODULES}),${COMMA}ambari-admin${COMMA}ambari-web,)
 
-# Returns "module=build=flavor" for each element of the (module x flavor) matrix.
+# Returns "layer=module=build=flavor" for each element of the (layer x module x flavor) matrix,
 #
 # $(call create-module-matrix,module-list)
 define create-module-matrix
-$(foreach flavor,${FLAVORS},$(addsuffix ${MODULE_PART_SEPARATOR}${AMBARI_RELEASE}${MODULE_PART_SEPARATOR}${flavor},$1))
+$(foreach layer,${LAYERS}, \
+	$(foreach flavor,${FLAVORS}, \
+		$(addprefix ${layer}${MODULE_PART_SEPARATOR},$(addsuffix ${MODULE_PART_SEPARATOR}${AMBARI_RELEASE}${MODULE_PART_SEPARATOR}${flavor},$1))))
 endef
 
 # Returns the path where Maven outputs the package each module.
@@ -53,26 +56,31 @@ define module-to-words
 $(subst ${MODULE_PART_SEPARATOR}, ,$1)
 endef
 
-define module-name
-$(word 1, $(call module-to-words,$1))
+define layer-name
+$(eval layer := $(word 1, $(call module-to-words,$1)))$(if $(findstring processed,${layer}),${EMPTY},-${layer})
 endef
 
-define build-name
+define module-name
 $(word 2, $(call module-to-words,$1))
 endef
 
+define build-name
+$(word 3, $(call module-to-words,$1))
+endef
+
 define flavor-name
-$(subst ${SPACE},-,$(wordlist 3, 1000, $(call module-to-words,$1)))
+$(subst ${SPACE},-,$(wordlist 4, 1000, $(call module-to-words,$1)))
 endef
 
 define format-image-name
-$1:$2-$3
+$1$2:$3-$4
 endef
 
 define module-to-image-name
 $(subst ${SPACE},,          \
 	$(call format-image-name, \
 		$(call module-name,$1), \
+		$(call layer-name,$1), \
 		$(call build-name,$1),  \
 		$(call flavor-name,$1)))
 endef
@@ -107,10 +115,15 @@ DEPLOY_TARGETS := $(foreach i,$(MODULE_MATRIX),deploy-${i})
 
 debug:
 	# AMBARI_RELEASE: ${AMBARI_RELEASE}
+	# DEPLOY_TARGETS: ${DEPLOY_TARGETS}
 	# DIST_URL: ${DIST_URL}
 	# EXTRA_MODULES: ${EXTRA_MODULES}
 	# FLAVORS: ${FLAVORS}
+	# LAYERS: ${LAYERS}
 	# MODULES: ${MODULES}
+	# MODULE_MATRIX: ${MODULE_MATRIX}
+	# PACKAGED_MODULES: ${PACKAGED_MODULES}
+	# PACKAGED_MODULES_WILDCARD: ${PACKAGED_MODULES_WILDCARD}
 	# PWD: ${PWD}
 
 build: ${MODULES}
@@ -126,17 +139,20 @@ ${DEPLOY_TARGETS}:
 	docker push ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@))
 
 .docker/${DOCKER_USERNAME}/modules/%:
+	$(eval layer  := $(call layer-name,$*))
 	$(eval module := $(call module-name,$*))
 	$(eval build  := $(call build-name,$*))
 	$(eval flavor := $(call flavor-name,$*))
-	$(eval image := $(call format-image-name,${module},${build},${flavor}))
-	# Building Docker image: ${image}
-	cp -v ${module}/* ${AMBARI_SRC}/${module}/target/repo/
+	$(eval image := $(call format-image-name,${module},${layer},${build},${flavor}))
+	$(eval build_dir := $(if $(findstring base,${layer}),${AMBARI_SRC}/${module}/target/repo,${module}))
+	# Building Docker image: ${image} in ${build_dir}
+	if [[ "${layer}" == "-base" ]]; then cp -v ${module}.docker ${build_dir}/Dockerfile; fi
 	docker build \
+		--build-arg "AMBARI_BUILD=${build}" \
 		--build-arg "FLAVOR=${flavor}" \
 		--build-arg "HUB_REPO=${DOCKER_USERNAME}" \
 		-t ${DOCKER_USERNAME}/${image} \
-		${AMBARI_SRC}/${module}/target/repo
+		${build_dir}
 	$(call create-marker-file,$@)
 
 ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
@@ -151,8 +167,8 @@ apache-ambari-%-src.tar.gz:
 
 clean:
 	# Removing sources and marker files for Ambari ${AMBARI_RELEASE}
-	rm -fr ${AMBARI_SRC} ${AMBARI_SRC}.tar.gz .docker/${DOCKER_USERNAME}/*${MODULE_PART_SEPARATOR}${AMBARI_RELEASE}${MODULE_PART_SEPARATOR}*
+	rm -fr ${AMBARI_SRC} ${AMBARI_SRC}.tar.gz .docker/${DOCKER_USERNAME}/modules/*${MODULE_PART_SEPARATOR}${AMBARI_RELEASE}${MODULE_PART_SEPARATOR}*
 
 .PHONY: build clean debug deploy help package source
-.SECONDARY: ${AMBARI_SRC}.tar.gz
+.SECONDARY: ${AMBARI_SRC}.tar.gz ${PACKAGED_MODULES}
 .SUFFIXES:
