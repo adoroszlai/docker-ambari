@@ -34,3 +34,4 @@ help:
 	${SORT} |                                                                  \
 	${PR} --omit-pagination --width=80 --columns=4 --indent=4
 
+.PHONY: help

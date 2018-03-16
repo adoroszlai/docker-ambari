@@ -43,15 +43,6 @@ define get-packaged-module-path
 $(foreach module,$1,${AMBARI_SRC}/${module}/target/repo/${module}.tar.gz)
 endef
 
-# Creates the given marker file and all its parent directories.
-# Used for non-file targets.
-#
-# $(call create-marker-file,marker-file)
-define create-marker-file
-mkdir -p $(dir $1)
-touch $1
-endef
-
 define module-to-words
 $(subst ${MODULE_PART_SEPARATOR}, ,$1)
 endef
@@ -72,6 +63,10 @@ define flavor-name
 $(subst ${SPACE},-,$(wordlist 4, 1000, $(call module-to-words,$1)))
 endef
 
+# Formats Docker image name.
+# Layer name should include separator, since it's optional.
+#
+# $(call format-image-name,module,layer,build,flavor)
 define format-image-name
 $1$2:$3-$4
 endef
@@ -111,38 +106,29 @@ endif
 MODULE_MATRIX := $(call create-module-matrix,${MODULES})
 PACKAGED_MODULES := $(call get-packaged-module-path,${MODULES})
 PACKAGED_MODULES_WILDCARD := $(subst target/repo,%,${PACKAGED_MODULES})
-DEPLOY_TARGETS := $(foreach i,$(MODULE_MATRIX),deploy-${i})
+DEPLOYABLES := $(foreach i,$(MODULE_MATRIX),deploy-${i})
 
-debug:
-	# AMBARI_RELEASE: ${AMBARI_RELEASE}
-	# DEPLOY_TARGETS: ${DEPLOY_TARGETS}
-	# DIST_URL: ${DIST_URL}
-	# EXTRA_MODULES: ${EXTRA_MODULES}
-	# FLAVORS: ${FLAVORS}
-	# LAYERS: ${LAYERS}
-	# MODULES: ${MODULES}
-	# MODULE_MATRIX: ${MODULE_MATRIX}
-	# PACKAGED_MODULES: ${PACKAGED_MODULES}
-	# PACKAGED_MODULES_WILDCARD: ${PACKAGED_MODULES_WILDCARD}
-	# PWD: ${PWD}
-
+#
+# main targets
+#
 build: ${MODULES}
-deploy: ${DEPLOY_TARGETS}
+deploy: ${DEPLOYABLES}
+package: source ${PACKAGED_MODULES}
+source: ${AMBARI_SRC}
 
 ${MODULES}: package
 ${MODULES}: %: $(call create-module-matrix,%)
-package: source ${PACKAGED_MODULES}
-source: ${AMBARI_SRC}
-${MODULE_MATRIX}: %: .docker/${DOCKER_USERNAME}/modules/%
 
-${DEPLOY_TARGETS}:
+# push Docker images
+${DEPLOYABLES}:
 	docker push ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@))
 
-.docker/${DOCKER_USERNAME}/modules/%:
-	$(eval layer  := $(call layer-name,$*))
-	$(eval module := $(call module-name,$*))
-	$(eval build  := $(call build-name,$*))
-	$(eval flavor := $(call flavor-name,$*))
+# build Docker images
+${MODULE_MATRIX}:
+	$(eval layer  := $(call layer-name,$@))
+	$(eval module := $(call module-name,$@))
+	$(eval build  := $(call build-name,$@))
+	$(eval flavor := $(call flavor-name,$@))
 	$(eval image := $(call format-image-name,${module},${layer},${build},${flavor}))
 	$(eval build_dir := $(if $(findstring base,${layer}),${AMBARI_SRC}/${module}/target/repo,${module}))
 	# Building Docker image: ${image} in ${build_dir}
@@ -153,22 +139,48 @@ ${DEPLOY_TARGETS}:
 		--build-arg "HUB_REPO=${DOCKER_USERNAME}" \
 		-t ${DOCKER_USERNAME}/${image} \
 		${build_dir}
-	$(call create-marker-file,$@)
 
+# build Ambari from source
 ${PACKAGED_MODULES_WILDCARD}: ${AMBARI_SRC}
 	# Building and packaging Ambari ${AMBARI_RELEASE}
 	$(call build-ambari)
 
+# extract Ambari source
 %-src: %-src.tar.gz
 	tar xzmf $<
 
+# download Ambari source
 apache-ambari-%-src.tar.gz:
 	curl -O ${DIST_URL}/$(patsubst apache-%-src.tar.gz,%,$@)/$@
 
+#
+# utilities for local build
+#
+BASE_IMAGES := $(foreach flavor,${FLAVORS},${flavor}=base)
+
+pull: ${BASE_IMAGES}
+${BASE_IMAGES}:
+	$(eval flavor := $(firstword $(call module-to-words,$@)))
+	docker pull adoroszlai/ambari-base:${flavor}
+
 clean:
 	# Removing sources and marker files for Ambari ${AMBARI_RELEASE}
-	rm -fr ${AMBARI_SRC} ${AMBARI_SRC}.tar.gz .docker/${DOCKER_USERNAME}/modules/*${MODULE_PART_SEPARATOR}${AMBARI_RELEASE}${MODULE_PART_SEPARATOR}*
+	rm -fr ${AMBARI_SRC} ${AMBARI_SRC}.tar.gz
 
-.PHONY: build clean debug deploy help package source
+debug:
+	# AMBARI_RELEASE: ${AMBARI_RELEASE}
+	# BASE_IMAGES: ${BASE_IMAGES}
+	# DEPLOYABLES: ${DEPLOYABLES}
+	# DIST_URL: ${DIST_URL}
+	# EXTRA_MODULES: ${EXTRA_MODULES}
+	# FLAVORS: ${FLAVORS}
+	# LAYERS: ${LAYERS}
+	# MODULES: ${MODULES}
+	# MODULE_MATRIX: ${MODULE_MATRIX}
+	# PACKAGED_MODULES: ${PACKAGED_MODULES}
+	# PACKAGED_MODULES_WILDCARD: ${PACKAGED_MODULES_WILDCARD}
+	# PWD: ${PWD}
+
+.PHONY: build clean debug deploy package pull source ${BASE_IMAGES} ${MODULE_MATRIX}
 .SECONDARY: ${AMBARI_SRC}.tar.gz ${PACKAGED_MODULES}
 .SUFFIXES:
