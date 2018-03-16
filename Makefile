@@ -15,7 +15,7 @@ include common.mk
 
 DIST_URL ?= http://archive.apache.org/dist/ambari
 FLAVORS ?= centos6 centos7 debian7 ubuntu16
-LAYERS ?= base
+LAYERS ?= final
 MODULES ?= ambari-agent ambari-server
 
 UID ?= $(shell id -u)
@@ -48,7 +48,7 @@ $(subst ${MODULE_PART_SEPARATOR}, ,$1)
 endef
 
 define layer-name
-$(eval layer := $(word 1, $(call module-to-words,$1)))$(if $(findstring processed,${layer}),${EMPTY},-${layer})
+$(eval layer := $(word 1, $(call module-to-words,$1)))$(if $(findstring final,${layer}),${EMPTY},-${layer})
 endef
 
 define module-name
@@ -116,7 +116,10 @@ deploy: ${DEPLOYABLES}
 package: source ${PACKAGED_MODULES}
 source: ${AMBARI_SRC}
 
+need_base_layer := $(findstring base,${LAYERS})
+ifdef need_base_layer
 ${MODULES}: package
+endif
 ${MODULES}: %: $(call create-module-matrix,%)
 
 # push Docker images
