@@ -5,6 +5,11 @@ sudo: required
 services:
   - docker
 
+env:
+  - AMBARI_RELEASE: 2.5.2
+  - AMBARI_RELEASE: 2.6.0
+  - AMBARI_RELEASE: 2.6.1
+
 script:
   - make build
 
