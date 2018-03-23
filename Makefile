@@ -26,6 +26,7 @@ AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
 AMBARI_VERSION := ${AMBARI_RELEASE}.0.0
 MODULE_PART_SEPARATOR := =
 EXTRA_MODULES := $(if $(findstring ambari-server,${MODULES}),${COMMA}ambari-admin${COMMA}ambari-web,)
+TAG := $(if ${TRAVIS_BRANCH},-${TRAVIS_BRANCH},)
 
 # Returns "layer=module=build=flavor" for each element of the (layer x module x flavor) matrix,
 #
@@ -124,7 +125,9 @@ ${MODULES}: %: $(call create-module-matrix,%)
 
 # push Docker images
 ${DEPLOYABLES}:
-	docker push ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@))
+	$(eval base_tag := ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@)))
+	if [ -n "${TAG}" ]; then docker tag ${base_tag} ${base_tag}${TAG}; fi
+	docker push ${base_tag}${TAG}
 
 # build Docker images
 ${MODULE_MATRIX}:
