@@ -15,7 +15,7 @@ include common.mk
 
 DIST_URL ?= http://archive.apache.org/dist/ambari
 FLAVORS ?= centos6 centos7 debian7 ubuntu16
-LAYERS ?= final
+LAYERS ?= $(if $(findstring [base],${TRAVIS_COMMIT_MESSAGE}),base final,final)
 MODULES ?= ambari-agent ambari-server
 
 UID ?= $(shell id -u)

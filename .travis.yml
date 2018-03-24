@@ -7,8 +7,9 @@ services:
 
 env:
   - AMBARI_RELEASE: 2.5.2
-  - AMBARI_RELEASE: 2.6.0
   - AMBARI_RELEASE: 2.6.1
+
+if: tag IS present
 
 script:
   - make build
@@ -20,4 +21,4 @@ deploy:
   - provider: script
     script: make deploy
     on:
-      all_branches: true
+      tags: true
