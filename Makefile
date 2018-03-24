@@ -126,8 +126,8 @@ ${MODULES}: %: $(call create-module-matrix,%)
 # push Docker images
 ${DEPLOYABLES}:
 	$(eval base_tag := ${DOCKER_USERNAME}/$(call module-to-image-name,$(subst deploy-,,$@)))
-	if [ -n "${TAG}" ]; then docker tag ${base_tag} ${base_tag}${TAG}; fi
-	docker push ${base_tag}${TAG}
+	if [ -n "${TAG}" ]; then docker tag ${base_tag} ${base_tag}${TAG}; docker push ${base_tag}${TAG}; fi
+	docker push ${base_tag}
 
 # build Docker images
 ${MODULE_MATRIX}:
