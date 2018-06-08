@@ -26,7 +26,7 @@ AMBARI_SRC := apache-ambari-${AMBARI_RELEASE}-src
 AMBARI_VERSION := ${AMBARI_RELEASE}.0.0
 MODULE_PART_SEPARATOR := =
 EXTRA_MODULES := $(if $(findstring ambari-server,${MODULES}),${COMMA}ambari-admin${COMMA}ambari-web,)
-TAG := $(if ${TRAVIS_BRANCH},-${TRAVIS_BRANCH},)
+TAG := $(if ${TRAVIS_TAG},-${TRAVIS_TAG},)
 
 # Returns "layer=module=build=flavor" for each element of the (layer x module x flavor) matrix,
 #
