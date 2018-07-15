@@ -91,14 +91,15 @@ define build-ambari
 		-w "${HOME_IN_DOCKER}" \
 		--entrypoint bash \
 		${DOCKER_USERNAME}/ambari-builder -c \
-			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
+			"mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Dmaven.test.skip=true -Del.log=WARN \
 				-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
 				clean package"
 endef
 else
 define build-ambari
 	cd $< && \
-		mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Del.log=WARN \
+		MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true" \
+		mvn -Dcheckstyle.skip -Dfindbugs.skip -Drat.skip -DskipTests -Dmaven.test.skip=true -Del.log=WARN \
 			-am -pl $(subst ${SPACE},${COMMA},${MODULES})${EXTRA_MODULES} -DnewVersion=${AMBARI_VERSION} \
 			clean package
 endef

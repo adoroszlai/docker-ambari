@@ -1,1 +1,2 @@
-AMBARI_RELEASE ?= 2.6.1
+AMBARI_RELEASE ?= 2.7.0
+LAYERS ?= base final

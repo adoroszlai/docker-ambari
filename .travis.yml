@@ -5,18 +5,18 @@ sudo: required
 services:
   - docker
 
-env:
-  - AMBARI_RELEASE: 2.5.2
-  - AMBARI_RELEASE: 2.6.2
-
-if: tag IS present
+cache:
+  directories:
+  - $HOME/.m2
 
 script:
-  - make build
+  - timeout 2700 make build || touch BUILD_TIMED_OUT
 
 before_deploy:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 
 deploy:
   - provider: script
-    script: make deploy
+    script: 'if [ ! -f BUILD_TIMED_OUT ]; then make deploy; fi'
+    on:
+      all_branches: true
